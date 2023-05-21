@@ -54,6 +54,24 @@ function initializeServiceWorker() {
   // B5. TODO - In the event that the service worker registration fails, console
   //            log that it has failed.
   // STEPS B6 ONWARDS WILL BE IN /sw.js
+  if ("serviceWorker" in navigator) {
+    window.addEventListener('load', async () => {
+      try {
+        const registration = await navigator.serviceWorker.register("/sw.js", {
+          scope: "/",
+        });
+        if (registration.installing) {
+          console.log("Service worker installing");
+        } else if (registration.waiting) {
+          console.log("Service worker installed");
+        } else if (registration.active) {
+          console.log("Service worker active");
+        }
+      } catch (error) {
+        console.error(`Registration failed with ${error}`);
+      }
+    })
+  }
 }
 
 /**
@@ -68,6 +86,11 @@ async function getRecipes() {
   // EXPOSE - START (All expose numbers start with A)
   // A1. TODO - Check local storage to see if there are any recipes.
   //            If there are recipes, return them.
+  let recipesObj = localStorage.getItem("recipes");
+
+  if (recipesObj) {
+    return JSON.parse(recipesObj);
+  }
   /**************************/
   // The rest of this method will be concerned with requesting the recipes
   // from the network
@@ -78,6 +101,24 @@ async function getRecipes() {
   //            take two parameters - resolve, and reject. These are functions
   //            you can call to either resolve the Promise or Reject it.
   /**************************/
+  let recipes = [];
+  return new Promise(async (resolve, reject) => {
+    for (let i = 0; i <= RECIPE_URLS.length; i++) {
+      if (i != RECIPE_URLS.length) {
+        try {
+          const res = await fetch(RECIPE_URLS[i]);
+          const recipe_json = await res.json();
+          recipes.push(recipe_json);
+        } catch (error) {
+          console.log(error);
+          reject(error);
+        }
+      } else {
+        localStorage.setItem("recipes", JSON.stringify(recipes));
+        resolve(recipes);
+      }
+    }
+  });
   // A4-A11 will all be *inside* the callback function we passed to the Promise
   // we're returning
   /**************************/
